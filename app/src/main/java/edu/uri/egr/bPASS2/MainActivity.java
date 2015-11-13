@@ -6,6 +6,9 @@ import android.bluetooth.BluetoothProfile;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Message;
+import android.view.GestureDetector;
+import android.view.Menu;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -25,6 +28,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 import android.media.MediaPlayer;
 
 import android.os.Handler;
+import android.widget.Toast;
 
 
 /**
@@ -32,6 +36,7 @@ import android.os.Handler;
  * Edited by John on 10/28/15
  */
 public class MainActivity extends HermesActivity {
+    //for bluetooth
     public static final String UART_SERVICE = RBLGattAttributes.BLE_SHIELD_SERVICE;
     public static final String UART_RX = RBLGattAttributes.BLE_SHIELD_RX;
     public static final String UART_TX = RBLGattAttributes.BLE_SHIELD_TX;
@@ -39,17 +44,18 @@ public class MainActivity extends HermesActivity {
     // Create Activity global variables for things we need across different methods.
     private BluetoothGatt mGatt;
     private Subscription mDeviceSubscription;
-
+    // for the graphing
     private int loop_i = 0;
     private int error_loop = 0;
     private LineGraphSeries<DataPoint> dataSeries;
     private final Handler mHandler = new Handler();
-
-    private boolean alarmOn = false;
-
-    private MediaPlayer mp;
-
-    //MediaPlayer mp = MediaPlayer.create(this, R.raw.alarm2);
+    //for the Alarm Phase
+    private boolean alarmOn = false;//is the alarm on
+    private MediaPlayer mp;         //set up to play sounds
+    //For the STOP buttin double click
+    private static final long DOUBLE_PRESS_INTERVAL = 250; // in millis
+    private long lastPressTime;
+    private boolean mHasDoubleClicked = false;
 
     // Access the views from our layout.
     @Bind(R.id.control_button) Switch mControlButton;
@@ -61,23 +67,6 @@ public class MainActivity extends HermesActivity {
     @Bind(R.id.o2_textView) TextView o2_TextView;
 
 
-    // Hook into our control button, and allow us to run code when one clicks on it.
-    @OnClick(R.id.control_button)
-    public void onControlClicked() {
-        // Create a byte package to send over to the nano.
-        byte[] data = new byte[]{(byte) 0xA0, (byte) 0x00, (byte) 0x00};
-
-        // Trigger the value we send.  This is a toggle button - so whenever we're running, shut off.  Whenever we're off, turn on.
-        if (mControlButton.isChecked())
-            data[1] = (byte) 0x01; // Send a value of 1 if we're enabled.
-
-        // Finally, write the value!
-        HermesBLE.write(mGatt, UART_SERVICE, UART_TX, data);
-    }
-    @OnClick(R.id.alarmButton)
-    public void onAlarmClicked() {
-       activateAlarm(o2_TextView);
-    }
     /*
     This is called when the Activity is created.  In Android, this will be when the activity is started fresh
     for the first time, or when the screen is rotated.  Pressing the back button will cause the view to be
@@ -155,20 +144,37 @@ public class MainActivity extends HermesActivity {
         // We also need to make sure our dialog can be seen.  If this isn't run, then nothing shows up!.
         dialog.show(getFragmentManager(), "dialog");
     }
-    /*
-    onDestroy is ran every time the activity is destroyed.  This is normally the last we see of the Activity.
-    Because of this, we don't want our bluetooth subscriptions to continue to run.
-    We NEED to tell HermesBLE to clean up our mess.  Otherwise, good luck connecting again!
-     */
-    @Override
-    protected void onDestroy() {
-        super.onDestroy(); // Call super, because things.
+    // Hook into our control button, and allow us to run code when one clicks on it.
+    @OnClick(R.id.control_button)
+    public void onControlClicked() {
+        // Create a byte package to send over to the nano.
+        byte[] data = new byte[]{(byte) 0xA0, (byte) 0x00, (byte) 0x00};
 
-        HermesBLE.close(mGatt); // Have Hermes handle closing out our bluetooth connection for us.
-        mDeviceSubscription.unsubscribe(); // And unsubscribe from the dialog we created.
+        // Trigger the value we send.  This is a toggle button - so whenever we're running, shut off.  Whenever we're off, turn on.
+        if (mControlButton.isChecked())
+            data[1] = (byte) 0x01; // Send a value of 1 if we're enabled.
 
-        // Finally, just incase we're not really closing, make sure we do - by running finish.
-        finish();
+        // Finally, write the value!
+        HermesBLE.write(mGatt, UART_SERVICE, UART_TX, data);
+    }
+    @OnClick(R.id.alarmButton)
+    public void onAlarmClicked() {
+        activateAlarm(o2_TextView);
+    }
+    //When  the big end button is double pressed stop the alarms
+    @OnClick(R.id.endAlarmButton)
+    public void onEndAlarmClicked() {
+        // Get current time in nano seconds.
+        long pressTime = System.currentTimeMillis();
+        // If double click...
+        if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
+
+            endAlarm(o2_TextView);
+            endAlarm(pulse_TextView);
+            endAlarm(motion_TextView);
+        }
+        // record the last time the menu button was pressed.
+        lastPressTime = pressTime;
     }
     private void showSimplePopUp() {
 
@@ -187,22 +193,43 @@ public class MainActivity extends HermesActivity {
         AlertDialog helpDialog = helpBuilder.create();
         helpDialog.show();
     }
+    //When the buttpn is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
     private void activateAlarm(TextView text_view){
         if (alarmOn == false){
             mp = MediaPlayer.create(this, R.raw.alarm2);
             mp.setLooping(true);
             mp.start();
-            text_view.setTextColor(Color.rgb(255, 0, 0));
+            text_view.setTextColor(Color.RED);
             alarmOn = true;
         }
-        else{
+        else {
+            endAlarm(text_view);
+        }
+    }
+    //Turn off the alarm
+    private void endAlarm(TextView text_view){
+        if (text_view.getCurrentTextColor() == Color.RED) {
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setTextColor(Color.rgb(0, 0, 0));
+            text_view.setTextColor(Color.BLACK);
             alarmOn = false;
         }
-
-
     }
+    /*
+    onDestroy is ran every time the activity is destroyed.  This is normally the last we see of the Activity.
+    Because of this, we don't want our bluetooth subscriptions to continue to run.
+    We NEED to tell HermesBLE to clean up our mess.  Otherwise, good luck connecting again!
+     */
+    @Override
+    protected void onDestroy() {
+        super.onDestroy(); // Call super, because things.
+
+        HermesBLE.close(mGatt); // Have Hermes handle closing out our bluetooth connection for us.
+        mDeviceSubscription.unsubscribe(); // And unsubscribe from the dialog we created.
+
+        // Finally, just incase we're not really closing, make sure we do - by running finish.
+        finish();
+    }
+
 }
