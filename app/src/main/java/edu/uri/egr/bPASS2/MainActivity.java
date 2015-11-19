@@ -223,6 +223,9 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
 
     private void UpdateGUI(){
+        if (elasped_time== 30){
+            onAlarmClicked();
+        }
         elasped_time++;
         myHandler.post(myRunnable);
     }
@@ -286,10 +289,10 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     //When the buttpn is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
     private void activateAlarm(TextView text_view){
         if (alarmOn == false){
-            mp = MediaPlayer.create(this, R.raw.alarm2);
+            mp = MediaPlayer.create(this, R.raw.passfullalarm);
             mp.setLooping(true);
             mp.start();
-            text_view.setTextColor(Color.RED);
+            //text_view.setTextColor(Color.RED);
             alarmOn = true;
         }
         else {
@@ -298,7 +301,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
     //Turn off the alarm
     private void endAlarm(TextView text_view){
-        if (text_view.getCurrentTextColor() == Color.RED) {
+        if (alarmOn) {
             mp.stop();
             mp.release();
             mp = null;
