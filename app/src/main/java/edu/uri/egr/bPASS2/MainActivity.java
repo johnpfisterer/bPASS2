@@ -12,6 +12,17 @@ import android.view.Menu;
 import android.widget.Switch;
 import android.widget.TextView;
 
+// ACCEL
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorManager;
+import android.hardware.SensorEventListener;
+
+// Timer Tasks
+import java.util.Timer;
+import java.util.TimerTask;
+import android.os.Handler;
+
 import butterknife.Bind;
 import butterknife.OnClick;
 import edu.uri.egr.hermesble.HermesBLE;
@@ -35,7 +46,7 @@ import android.widget.Toast;
  * Created by cody on 10/8/15.\\
  * Edited by John on 10/28/15
  */
-public class MainActivity extends HermesActivity {
+public class MainActivity extends HermesActivity implements SensorEventListener{
     //for bluetooth
     public static final String UART_SERVICE = RBLGattAttributes.BLE_SHIELD_SERVICE;
     public static final String UART_RX = RBLGattAttributes.BLE_SHIELD_RX;
@@ -66,6 +77,19 @@ public class MainActivity extends HermesActivity {
     @Bind(R.id.pulse_textView) TextView pulse_TextView;
     @Bind(R.id.o2_textView) TextView o2_TextView;
 
+    // Accelerometer Variables
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+    private float vals[] = new float[3];
+    private float gravity[] = new float[3];
+    private float linear_acceleration[] = new float[3];
+
+    //Timer variables
+    private int elasped_time = 0;
+    final Handler myHandler = new Handler();
+    TextView timerstring;
+    private float abs_accel[] = new float[3];
+
 
     /*
     This is called when the Activity is created.  In Android, this will be when the activity is started fresh
@@ -85,6 +109,24 @@ public class MainActivity extends HermesActivity {
         graph.getViewport().setMaxX(100);
 
         runBLE();
+
+         /* Configure the accelerometer to report data at the fastest rate. */
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mSensorManager.registerListener(this,mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        /*
+        Accelerometer, SENSOR_DELAY_FASTEST: 18-20 ms
+        Accelerometer, SENSOR_DELAY_GAME: 37-39 ms
+        Accelerometer, SENSOR_DELAY_UI: 85-87 ms
+        Accelerometer, SENSOR_DELAY_NORMAL: 215-230 ms */
+
+        // Timer
+        timerstring = (TextView)findViewById(R.id.textView4);
+        Timer myTimer = new Timer();
+        myTimer.schedule(new TimerTask(){
+            @Override
+            public void run(){UpdateGUI();}
+        },0,1000);
     }
     /*
     This Method Runs the bluetooth connection
@@ -144,6 +186,54 @@ public class MainActivity extends HermesActivity {
         // We also need to make sure our dialog can be seen.  If this isn't run, then nothing shows up!.
         dialog.show(getFragmentManager(), "dialog");
     }
+
+    //@Override
+    public void onSensorChanged(SensorEvent sensorEvent)//
+    {
+        Sensor mySensor = sensorEvent.sensor;
+
+        final float alpha = (float)0.8;
+
+        /* Save the sensor variables locally so we can manipulate and display later. */
+        for (int j = 0; j < 3; j++) {
+            vals[j] = sensorEvent.values[j];
+        }
+
+        // Isolate the force of gravity with the low-pass filter.
+        gravity[0] = alpha * gravity[0] + (1 - alpha) * vals[0];
+        gravity[1] = alpha * gravity[1] + (1 - alpha) * vals[1];
+        gravity[2] = alpha * gravity[2] + (1 - alpha) * vals[2];
+
+        // Remove the gravity contribution with the high-pass filter.
+        linear_acceleration[0] = vals[0] - gravity[0];
+        linear_acceleration[1] = vals[1] - gravity[1];
+        linear_acceleration[2] = vals[2] - gravity[2];
+
+        // Take the absolute value of all axis and resets the time if above a threshold
+        for (int i=0; i<3; i++){
+            abs_accel[i] = Math.abs(linear_acceleration[i]);
+            if (abs_accel[i] > 0.5) {
+                elasped_time = 0;
+            }
+        }
+    }
+
+    //@Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+    }
+
+    private void UpdateGUI(){
+        elasped_time++;
+        myHandler.post(myRunnable);
+    }
+
+    final Runnable myRunnable = new Runnable(){
+        public void run(){
+            timerstring.setText(String.valueOf(elasped_time));
+        }
+    };
+
+
     // Hook into our control button, and allow us to run code when one clicks on it.
     @OnClick(R.id.control_button)
     public void onControlClicked() {
