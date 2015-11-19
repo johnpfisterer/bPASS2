@@ -105,4 +105,10 @@
         android:clickable="true"
         android:contextClickable="true" />
 
+    <Button
+        android:layout_width="373dp"
+        android:layout_height="wrap_content"
+        android:text="Turn Off Alarm"
+        android:id="@+id/endAlarmButton" />
+
 </LinearLayout>
