@@ -159,7 +159,7 @@ public class MainActivity extends HermesActivity {
     }
     @OnClick(R.id.alarmButton)
     public void onAlarmClicked() {
-        activateAlarm(o2_TextView);
+        activateAlarm(o2_TextView, "full");
     }
     //When  the big end button is double pressed stop the alarms
     @OnClick(R.id.endAlarmButton)
