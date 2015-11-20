@@ -302,7 +302,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             mp.stop();
             mp.release();
             mp = null;
-
+            myHandler.post(updateMotionColor);
             mp = MediaPlayer.create(this, R.raw.passfullalarm);
             mp.setLooping(true);
             mp.start();
