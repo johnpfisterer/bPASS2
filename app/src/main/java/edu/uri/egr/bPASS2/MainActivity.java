@@ -227,16 +227,19 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             onAlarmClicked();
         }
         elasped_time++;
-        myHandler.post(myRunnable);
+        myHandler.post(updateTime);
     }
 
-    final Runnable myRunnable = new Runnable(){
+    final Runnable updateTime = new Runnable(){
         public void run(){
             timerstring.setText(String.valueOf(elasped_time));
         }
     };
 
-
+    final MyRunnable updateMotionColor = new MyRunnable(){
+        public void run(){ motion_TextView.setTextColor(Color.RED);
+        }
+    };
     // Hook into our control button, and allow us to run code when one clicks on it.
     @OnClick(R.id.control_button)
     public void onControlClicked() {
@@ -254,6 +257,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     public void onAlarmClicked() {
         activateAlarm(o2_TextView, "full");
     }
+
+
     //When  the big end button is double pressed stop the alarms
     @OnClick(R.id.endAlarmButton)
     public void onEndAlarmClicked() {
@@ -286,33 +291,32 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         AlertDialog helpDialog = helpBuilder.create();
         helpDialog.show();
     }
-    //When the buttpn is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
+    //When the button is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
     private void activateAlarm(TextView text_view, String type){
         if (alarmOn == false){
-<<<<<<< HEAD
             if (type == "full")
                 mp = MediaPlayer.create(this, R.raw.prealarmpass);
             else if (type == "pre")
                 mp = MediaPlayer.create(this, R.raw.passfullalarm);
-=======
             mp = MediaPlayer.create(this, R.raw.passfullalarm);
->>>>>>> refs/remotes/origin/Accelerometer
+
             mp.setLooping(true);
             mp.start();
-            //text_view.setTextColor(Color.RED);
             alarmOn = true;
+            myHandler.post(updateMotionColor);
+
         }
         else {
             endAlarm(text_view);
         }
     }
     //Turn off the alarm
-    private void endAlarm(TextView text_view){
+    private void endAlarm(TextView text_view) {
         if (alarmOn) {
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setTextColor(Color.BLACK);
+            motion_TextView.setTextColor(Color.BLACK);
             alarmOn = false;
         }
     }
