@@ -258,7 +258,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
     @OnClick(R.id.alarmButton)
     public void onAlarmClicked() {
-        activateAlarm(o2_TextView, "full");
+        activateAlarm(o2_TextView);
     }    //When  the big end button is double pressed stop the alarms
     @OnClick(R.id.endAlarmButton)
     public void onEndAlarmClicked() {
@@ -290,13 +290,9 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         AlertDialog helpDialog = helpBuilder.create();
         helpDialog.show();
     }
-    private void activateAlarm(TextView text_view){        if (!alarmOn){
-            if (type == "full")
-                mp = MediaPlayer.create(this, R.raw.prealarmpass);
-            else if (type == "pre")
-                mp = MediaPlayer.create(this, R.raw.passfullalarm);
-            mp = MediaPlayer.create(this, R.raw.passfullalarm);
-
+    private void activateAlarm(TextView text_view){
+        if (!alarmOn){
+            mp = MediaPlayer.create(this, R.raw.passprealarm);
             mp.setLooping(true);
             mp.start();
             alarmOn = true;
@@ -320,7 +316,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setTextColor(Color.BLACK);            alarmOn = false;
+            text_view.setTextColor(Color.BLACK);
+            alarmOn = false;
             elasped_time = 0;
         }
     }
