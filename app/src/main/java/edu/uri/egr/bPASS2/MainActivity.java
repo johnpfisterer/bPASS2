@@ -61,7 +61,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     private LineGraphSeries<DataPoint> dataSeries;
     private final Handler mHandler = new Handler();
     //for the Alarm Phase
-    private boolean alarmOn = false;//is the alarm on
+    private boolean alarmOn = false; //is the alarm on
     private MediaPlayer mp;         //set up to play sounds
     //For the STOP buttin double click
     private static final long DOUBLE_PRESS_INTERVAL = 250; // in millis
@@ -213,7 +213,10 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         for (int i=0; i<3; i++){
             abs_accel[i] = Math.abs(linear_acceleration[i]);
             if (abs_accel[i] > 0.5) {
-                elasped_time = 0;
+                if(elasped_time < 30) {
+                    elasped_time = 0;
+                    endAlarm(motion_TextView);
+                }
             }
         }
     }
@@ -223,8 +226,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
 
     private void UpdateGUI(){
-        if (elasped_time== 30){
-            onAlarmClicked();
+        if (elasped_time == 20|elasped_time == 30){
+            activateAlarm(motion_TextView);
         }
         elasped_time++;
         myHandler.post(myRunnable);
@@ -254,6 +257,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     public void onAlarmClicked() {
         activateAlarm(o2_TextView);
     }
+
     //When  the big end button is double pressed stop the alarms
     @OnClick(R.id.endAlarmButton)
     public void onEndAlarmClicked() {
@@ -262,8 +266,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         // If double click...
         if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
 
-            endAlarm(o2_TextView);
-            endAlarm(pulse_TextView);
+            //endAlarm(o2_TextView);
+            //endAlarm(pulse_TextView);
             endAlarm(motion_TextView);
         }
         // record the last time the menu button was pressed.
@@ -286,27 +290,37 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         AlertDialog helpDialog = helpBuilder.create();
         helpDialog.show();
     }
+
     //When the buttpn is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
     private void activateAlarm(TextView text_view){
-        if (alarmOn == false){
-            mp = MediaPlayer.create(this, R.raw.passfullalarm);
+        if (!alarmOn){
+            mp = MediaPlayer.create(this, R.raw.passprealarm);
             mp.setLooping(true);
             mp.start();
-            //text_view.setTextColor(Color.RED);
             alarmOn = true;
         }
         else {
-            endAlarm(text_view);
+            alarmOn = false;
+            mp.stop();
+            mp.release();
+            mp = null;
+
+            mp = MediaPlayer.create(this, R.raw.passfullalarm);
+            mp.setLooping(true);
+            mp.start();
+            alarmOn = true;
         }
     }
+
     //Turn off the alarm
     private void endAlarm(TextView text_view){
         if (alarmOn) {
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setTextColor(Color.BLACK);
+            //text_view.setTextColor(Color.BLACK);
             alarmOn = false;
+            elasped_time = 0;
         }
     }
     /*
