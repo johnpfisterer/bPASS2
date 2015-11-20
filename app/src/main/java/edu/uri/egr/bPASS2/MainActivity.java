@@ -194,9 +194,12 @@ public class MainActivity extends HermesActivity {
         helpDialog.show();
     }
     //When the buttpn is pushed, if the alarm is on, turn it off. If the alarm is off, turn it on
-    private void activateAlarm(TextView text_view){
+    private void activateAlarm(TextView text_view, String type){
         if (alarmOn == false){
-            mp = MediaPlayer.create(this, R.raw.alarm2);
+            if (type == "full")
+                mp = MediaPlayer.create(this, R.raw.prealarmpass);
+            else if (type == "pre")
+                mp = MediaPlayer.create(this, R.raw.passfullalarm);
             mp.setLooping(true);
             mp.start();
             text_view.setTextColor(Color.RED);
