@@ -158,13 +158,13 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                                     .flatMap(event -> new UartEvaluator().handle(event))
                                     .subscribe(uartEvent -> {
                                         Timber.d("Received event: %02x - with data: %s", uartEvent.type, String.valueOf(uartEvent.data));
-                                        if (uartEvent.type == 0x0B) {
+                                        if (uartEvent.type == 0x0C) {
                                             mTextValue.setText(String.valueOf(uartEvent.data));
                                             dataSeries.appendData(new DataPoint(loop_i, uartEvent.data), true, 400);
                                             //graph.addSeries(dataSeries);
                                             //mHandler.postDelayed(this, 200);
                                             loop_i++;
-                                        } else if (uartEvent.type == 0x0A)
+                                        } else if (uartEvent.type == 0x0B)
                                             hTextValue.setText(String.valueOf(uartEvent.data));
                                         // Do stuff here in response to the data event.
                                     });
