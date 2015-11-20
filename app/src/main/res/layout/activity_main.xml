@@ -95,6 +95,13 @@
         android:layout_height="wrap_content"
         android:text="Enable Analog Input"/>
 
+    <TextView
+        android:layout_width="19dp"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:id="@+id/textView4"
+        android:layout_gravity="center_horizontal" />
+
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
