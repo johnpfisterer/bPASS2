@@ -3,12 +3,11 @@ package edu.uri.egr.bPASS2;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothProfile;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Message;
-import android.view.GestureDetector;
-import android.view.Menu;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -38,9 +37,6 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 
 import android.media.MediaPlayer;
 
-import android.os.Handler;
-import android.widget.Toast;
-
 
 /**
  * Created by cody on 10/8/15.\\
@@ -67,15 +63,19 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     private static final long DOUBLE_PRESS_INTERVAL = 250; // in millis
     private long lastPressTime;
     private boolean mHasDoubleClicked = false;
+    private int heartRate = 0;
+    private int maxHR = 0;
 
     // Access the views from our layout.
     @Bind(R.id.control_button) Switch mControlButton;
-    @Bind(R.id.analog_value) TextView mTextValue;
-    @Bind(R.id.heartrate_value) TextView hTextValue;
+    @Bind(R.id.heartRate_value) TextView heartTextValue;
+    @Bind(R.id.temp_value) TextView tempTextValue;
     @Bind(R.id.graph) GraphView graph;
     @Bind(R.id.motion_textView) TextView motion_TextView;
     @Bind(R.id.pulse_textView) TextView pulse_TextView;
     @Bind(R.id.o2_textView) TextView o2_TextView;
+    @Bind(R.id.pressure_value) TextView pTextValue;
+    @Bind(R.id.age_editText) TextView ageEditText;
 
     // Accelerometer Variables
     private SensorManager mSensorManager;
@@ -89,7 +89,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     final Handler myHandler = new Handler();
     TextView timerstring;
     private float abs_accel[] = new float[3];
-
+    private int age = 0;
 
     /*
     This is called when the Activity is created.  In Android, this will be when the activity is started fresh
@@ -100,7 +100,6 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
         dataSeries = new LineGraphSeries<DataPoint>();
         graph.addSeries(dataSeries);
@@ -159,13 +158,16 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                                     .subscribe(uartEvent -> {
                                         Timber.d("Received event: %02x - with data: %s", uartEvent.type, String.valueOf(uartEvent.data));
                                         if (uartEvent.type == 0x0C) {
-                                            mTextValue.setText(String.valueOf(uartEvent.data));
+                                            heartTextValue.setText(String.valueOf(uartEvent.data));
                                             dataSeries.appendData(new DataPoint(loop_i, uartEvent.data), true, 400);
                                             //graph.addSeries(dataSeries);
                                             //mHandler.postDelayed(this, 200);
                                             loop_i++;
-                                        } else if (uartEvent.type == 0x0B)
-                                            hTextValue.setText(String.valueOf(uartEvent.data));
+                                        } else if (uartEvent.type == 0x0B) {
+                                            tempTextValue.setText(String.valueOf(uartEvent.data));
+                                        } else if (uartEvent.type == 0x0A) {
+                                            pTextValue.setText(String.valueOf(uartEvent.data));
+                                        }
                                         // Do stuff here in response to the data event.
                                     });
                         },
@@ -240,7 +242,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     };
 
     final MyRunnable updateMotionColor = new MyRunnable(){
-        public void run(){ motion_TextView.setTextColor(Color.RED);
+        public void run(){ motion_TextView.setBackgroundColor(Color.parseColor("#F44336"));
         }
     };
     // Hook into our control button, and allow us to run code when one clicks on it.
@@ -316,17 +318,27 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setTextColor(Color.BLACK);
+            text_view.setBackgroundColor(Color.parseColor("#4CAF50"));
             alarmOn = false;
             elasped_time = 0;
         }
     }
-    /*
-    onDestroy is ran every time the activity is destroyed.  This is normally the last we see of the Activity.
-    Because of this, we don't want our bluetooth subscriptions to continue to run.
-    We NEED to tell HermesBLE to clean up our mess.  Otherwise, good luck connecting again!
-     */
-    @Override
+
+    @OnClick(R.id.age_button)
+    public void onAgeClicked() {
+        try {
+            age = Integer.parseInt(ageEditText.getText().toString());
+        } catch (NumberFormatException e) {
+            ageEditText.setText("Enter a number");
+        }
+        maxHR = 220 - age;
+
+        InputMethodManager inputManager = (InputMethodManager)
+                getSystemService(Context.INPUT_METHOD_SERVICE);
+        inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),
+                InputMethodManager.HIDE_NOT_ALWAYS);
+        heartTextValue.setText(String.valueOf(maxHR));
+    }
     protected void onDestroy() {
         super.onDestroy(); // Call super, because things.
 

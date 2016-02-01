@@ -4,7 +4,6 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/bPASS WIOT copy.iml" filepath="$PROJECT_DIR$/bPASS WIOT copy.iml" />
-      <module fileurl="file://$PROJECT_DIR$/bPASS2.iml" filepath="$PROJECT_DIR$/bPASS2.iml" />
     </modules>
   </component>
 </project>

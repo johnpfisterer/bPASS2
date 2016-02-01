@@ -8,45 +8,77 @@
               android:padding="16dp"
     android:weightSum="1">
 
-    <LinearLayout
-        android:orientation="horizontal"
+    <GridLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="0">
+        android:columnCount="2"
+        android:rowCount="2"
+        android:useDefaultMargins="true"
+        android:touchscreenBlocksFocus="false"
+        android:transitionGroup="false"
+        android:textAlignment="center"
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Alarms:"
-            android:id="@+id/textView3"
+            android:text="RR"
+            android:id="@+id/o2_textView"
             android:layout_weight="1"
-            android:textSize="25dp" />
+            android:textSize="25dp"
+            android:layout_row="0"
+            android:layout_column="0"
+            android:textAlignment="center"
+            android:background="#4CAF50"
+            android:layout_rowWeight="0"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal|center_horizontal" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="HR"
+            android:id="@+id/pulse_textView"
+            android:layout_weight="1"
+            android:textSize="25dp"
+            android:background="#4CAF50"
+            android:layout_row="0"
+            android:layout_column="1"
+            android:layout_rowWeight="0"
+            android:textAlignment="center"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal|center_horizontal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Temp"
+            android:id="@+id/temp_textView"
+            android:layout_weight="1"
+            android:textSize="25dp"
+            android:background="#4CAF50"
+            android:layout_row="1"
+            android:layout_column="0"
+            android:layout_rowWeight="0"
+            android:layout_columnWeight="1"
+            android:textAlignment="center"
+            android:layout_gravity="fill_horizontal|center_horizontal" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
             android:text="Motion"
             android:id="@+id/motion_textView"
             android:layout_weight="1"
-            android:textSize="25dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="O2"
-            android:id="@+id/o2_textView"
-            android:layout_weight="1"
-            android:textSize="25dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pulse"
-            android:id="@+id/pulse_textView"
-            android:layout_weight="1"
-            android:textSize="25dp" />
-    </LinearLayout>
+            android:textSize="25dp"
+            android:background="#4CAF50"
+            android:layout_row="1"
+            android:layout_column="1"
+            android:layout_rowWeight="0"
+            android:layout_columnWeight="1"
+            android:textAlignment="center"
+            android:layout_gravity="fill_horizontal|center_horizontal" />
+    </GridLayout>
 
     <com.jjoe64.graphview.GraphView
         android:layout_width="353dp"
@@ -61,7 +93,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Analog Value"
+        android:text="Heart Rate Value"
         android:id="@+id/textView2"
         android:layout_gravity="center_horizontal"
         android:textSize="25dp" />
@@ -69,24 +101,41 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/analog_value"
+        android:id="@+id/heartRate_value"
         android:textAppearance="@style/TextAppearance.AppCompat.Display3"
         tools:text="130"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Heart Rate Value"
+        android:text="Tempurature Value"
         android:id="@+id/textView"
         android:textSize="25dp" />
 
     <TextView
         android:layout_width= "wrap_content"
         android:layout_height= "wrap_content"
-        android:id= "@+id/heartrate_value"
+        android:id= "@+id/temp_value"
         android:textAppearance= "@style/TextAppearance.AppCompat.Display3"
         tools:text="80"
         android:layout_gravity= "center_horizontal"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Pressure Value"
+        android:id="@+id/textView5"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0" />
+
+    <TextView
+        tools:text="80"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/pressure_value"
+        android:textAppearance="@style/TextAppearance.AppCompat.Display3"
+        android:layout_gravity="center_horizontal"
+        android:layout_weight="0" />
 
     <Switch
         android:id="@+id/control_button"
@@ -95,27 +144,53 @@
         android:layout_height="wrap_content"
         android:text="Enable Analog Input"/>
 
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/age_editText"
+            android:layout_weight="1" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter"
+            android:id="@+id/age_button"
+            android:layout_weight="0" />
+    </LinearLayout>
+
     <TextView
-        android:layout_width="19dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="0"
         android:id="@+id/textView4"
         android:layout_gravity="center_horizontal" />
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Alarm"
-        android:id="@+id/alarmButton"
-        android:layout_gravity="right"
-        android:layout_weight="0"
-        android:clickable="true"
-        android:contextClickable="true" />
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-    <Button
-        android:layout_width="373dp"
-        android:layout_height="wrap_content"
-        android:text="Turn Off Alarm"
-        android:id="@+id/endAlarmButton" />
+        <Button
+            android:layout_width="97dp"
+            android:layout_height="wrap_content"
+            android:text="Turn Off Alarm"
+            android:id="@+id/endAlarmButton"
+            android:layout_weight="1"
+            android:visibility="visible" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Alarm"
+            android:id="@+id/alarmButton"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:contextClickable="true" />
+    </LinearLayout>
 
 </LinearLayout>
