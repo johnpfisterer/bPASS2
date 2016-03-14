@@ -18,6 +18,7 @@ import android.hardware.SensorManager;
 import android.hardware.SensorEventListener;
 
 // Timer Tasks
+import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
 import android.os.Handler;
@@ -44,36 +45,50 @@ import android.media.MediaPlayer;
  */
 public class MainActivity extends HermesActivity implements SensorEventListener{
     //for bluetooth
-    public static final String UART_SERVICE = RBLGattAttributes.BLE_SHIELD_SERVICE;
-    public static final String UART_RX = RBLGattAttributes.BLE_SHIELD_RX;
-    public static final String UART_TX = RBLGattAttributes.BLE_SHIELD_TX;
+    public static final String UART_SERVICE = RBLGattAttributes.BLE_SHIELD_SERVICE,
+                               UART_RX = RBLGattAttributes.BLE_SHIELD_RX,
+                               UART_TX = RBLGattAttributes.BLE_SHIELD_TX;
 
     // Create Activity global variables for things we need across different methods.
     private BluetoothGatt mGatt;
     private Subscription mDeviceSubscription;
+
     // for the graphing
-    private int loop_i = 0;
-    private int error_loop = 0;
+    private int loop_i = 0,
+                error_loop = 0;
     private LineGraphSeries<DataPoint> dataSeries;
     private final Handler mHandler = new Handler();
+
     //for the Alarm Phase
-    private boolean alarmOn = false; //is the alarm on
+    private boolean alarmOn[] = new boolean[4]; // [passAlarm hrAlarm rrAlarm tempAlarm]
     private MediaPlayer mp;         //set up to play sounds
-    //For the STOP buttin double click
+
+    //For the STOP button double click
     private static final long DOUBLE_PRESS_INTERVAL = 250; // in millis
     private long lastPressTime;
     private boolean mHasDoubleClicked = false;
-    private int heartRate = 0;
-    private int maxHR = 0;
+
+    //For Heart Rate
+    private int heartRate[] = new int[60];
+    private int maxHR = 0,
+                indexHR = 0;
+    private boolean isHRBuffered = false;
+
+    //For Respiration Rate
+    private int respirationRate[] = new int[60];
+    private int maxRR = 30,
+            indexRR = 0;
+    private boolean isRRBuffered = false;
+
 
     // Access the views from our layout.
     @Bind(R.id.control_button) Switch mControlButton;
     @Bind(R.id.heartRate_value) TextView heartTextValue;
     @Bind(R.id.temp_value) TextView tempTextValue;
     @Bind(R.id.graph) GraphView graph;
-    @Bind(R.id.motion_textView) TextView motion_TextView;
-    @Bind(R.id.pulse_textView) TextView pulse_TextView;
-    @Bind(R.id.o2_textView) TextView o2_TextView;
+    @Bind(R.id.motion_textView) TextView motion_textView;
+    @Bind(R.id.pulse_textView) TextView pulse_textView;
+    @Bind(R.id.o2_textView) TextView o2_textView;
     @Bind(R.id.pressure_value) TextView pTextValue;
     @Bind(R.id.age_editText) TextView ageEditText;
 
@@ -82,7 +97,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     private Sensor mAccelerometer;
     private float vals[] = new float[3];
     private float gravity[] = new float[3];
-    private float linear_acceleration[] = new float[3];
+    private float linearAcceleration[] = new float[3];
 
     //Timer variables
     private int elasped_time = 0;
@@ -124,21 +139,24 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         Timer myTimer = new Timer();
         myTimer.schedule(new TimerTask(){
             @Override
-            public void run(){UpdateGUI();}
-        },0,1000);
+            public void run(){
+                updateGUI();
+            }
+        },0,1000); // run every 1 seconds
     }
     /*
     This Method Runs the bluetooth connection
      */
     protected void  runBLE(){
         BLESelectionDialog dialog = new BLESelectionDialog();
-        // Now, we need to subscribe to it.  This might look like black magic, but just follow the comments.
+        // Now, we need to subscribe to it.
         mDeviceSubscription = dialog.getObservable() // Get the Observable from the device dialog.
 
                 // We'll want to close our activity if we don't select any devices.
                 //.doOnCompleted(() -> { if (mGatt == null) finish(); })
 
-                // Once we get the device, we hit this flatMap.  Using flatMap, we can convert this device into a connection.
+                // Once we get the device, we hit this flatMap.
+                // Using flatMap, we can convert this device into a connection.
                 .flatMap(HermesBLE::connect)
 
                         // Only continue if our connection event type is STATE_CONNECTED
@@ -159,6 +177,17 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                                         Timber.d("Received event: %02x - with data: %s", uartEvent.type, String.valueOf(uartEvent.data));
                                         if (uartEvent.type == 0x0C) {
                                             heartTextValue.setText(String.valueOf(uartEvent.data));
+
+                                            // stores last 60 index of HR
+                                            heartRate[indexHR] = uartEvent.data;
+                                            indexHR++;
+                                            if (indexHR == heartRate.length) {
+                                                indexHR = 0;
+                                                isHRBuffered = true;
+                                            }
+                                            if (isHRBuffered) {
+                                                checkHRAverage();
+                                            }
                                             dataSeries.appendData(new DataPoint(loop_i, uartEvent.data), true, 400);
                                             //graph.addSeries(dataSeries);
                                             //mHandler.postDelayed(this, 200);
@@ -167,6 +196,17 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                                             tempTextValue.setText(String.valueOf(uartEvent.data));
                                         } else if (uartEvent.type == 0x0A) {
                                             pTextValue.setText(String.valueOf(uartEvent.data));
+
+                                            // stores last 60 index of RR
+                                            respirationRate[indexRR] = uartEvent.data;
+                                            indexRR++;
+                                            if (indexRR == respirationRate.length) {
+                                                indexRR = 0;
+                                                isRRBuffered = true;
+                                            }
+                                            if (isRRBuffered) {
+                                                checkRRAverage();
+                                            }
                                         }
                                         // Do stuff here in response to the data event.
                                     });
@@ -207,17 +247,17 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         gravity[2] = alpha * gravity[2] + (1 - alpha) * vals[2];
 
         // Remove the gravity contribution with the high-pass filter.
-        linear_acceleration[0] = vals[0] - gravity[0];
-        linear_acceleration[1] = vals[1] - gravity[1];
-        linear_acceleration[2] = vals[2] - gravity[2];
+        linearAcceleration[0] = vals[0] - gravity[0];
+        linearAcceleration[1] = vals[1] - gravity[1];
+        linearAcceleration[2] = vals[2] - gravity[2];
 
         // Take the absolute value of all axis and resets the time if above a threshold
         for (int i=0; i<3; i++){
-            abs_accel[i] = Math.abs(linear_acceleration[i]);
+            abs_accel[i] = Math.abs(linearAcceleration[i]);
             if (abs_accel[i] > 0.5) {
                 if(elasped_time < 30) {
                     elasped_time = 0;
-                    endAlarm(motion_TextView);
+                    endAlarm(motion_textView);
                 }
             }
         }
@@ -227,9 +267,9 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
     }
 
-    private void UpdateGUI(){
+    private void updateGUI(){
         if (elasped_time == 20|elasped_time == 30){
-            activateAlarm(motion_TextView);
+            activatePassAlarm(motion_textView);
         }
         elasped_time++;
         myHandler.post(updateTime);
@@ -242,9 +282,10 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     };
 
     final MyRunnable updateMotionColor = new MyRunnable(){
-        public void run(){ motion_TextView.setBackgroundColor(Color.parseColor("#F44336"));
+        public void run(){ motion_textView.setBackgroundColor(Color.parseColor("#F44336"));
         }
     };
+
     // Hook into our control button, and allow us to run code when one clicks on it.
     @OnClick(R.id.control_button)
     public void onControlClicked() {
@@ -260,8 +301,9 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
     @OnClick(R.id.alarmButton)
     public void onAlarmClicked() {
-        activateAlarm(o2_TextView);
+        activatePassAlarm(o2_textView);
     }    //When  the big end button is double pressed stop the alarms
+
     @OnClick(R.id.endAlarmButton)
     public void onEndAlarmClicked() {
         // Get current time in nano seconds.
@@ -270,7 +312,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
             //endAlarm(o2_TextView);
             //endAlarm(pulse_TextView);
-            endAlarm(motion_TextView);
+            endAlarm(motion_textView);
         }
         // record the last time the menu button was pressed.
         lastPressTime = pressTime;
@@ -292,15 +334,20 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         AlertDialog helpDialog = helpBuilder.create();
         helpDialog.show();
     }
-    private void activateAlarm(TextView text_view){
-        if (!alarmOn){
+    private void activatePassAlarm(TextView text_view){
+        if (!alarmOn[0]){
+            if(isAnyTrue(alarmOn)){
+                mp.stop();
+                mp.release();
+                mp = null;
+                myHandler.post(updateMotionColor);
+            }
             mp = MediaPlayer.create(this, R.raw.passprealarm);
             mp.setLooping(true);
             mp.start();
-            alarmOn = true;
+            alarmOn[0] = true;
         }
         else {
-            alarmOn = false;
             mp.stop();
             mp.release();
             mp = null;
@@ -308,18 +355,36 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             mp = MediaPlayer.create(this, R.raw.passfullalarm);
             mp.setLooping(true);
             mp.start();
-            alarmOn = true;
+            alarmOn[0] = true;
         }
+    }
+
+    private void activateHeartRateAlarm(){
+        if (!isAnyTrue(alarmOn)) {
+            mp = MediaPlayer.create(this, R.raw.passprealarm);
+            mp.setLooping(true);
+            mp.start();
+        }
+        alarmOn[2] = true;
+    }
+
+    private void activateRespirationRateAlarm(){
+        if (!isAnyTrue(alarmOn)) {
+            mp = MediaPlayer.create(this, R.raw.passprealarm);
+            mp.setLooping(true);
+            mp.start();
+        }
+        alarmOn[3] = true;
     }
 
     //Turn off the alarm
     private void endAlarm(TextView text_view) {
-        if (alarmOn) {
+        if (isAnyTrue(alarmOn)) {
             mp.stop();
             mp.release();
             mp = null;
             text_view.setBackgroundColor(Color.parseColor("#4CAF50"));
-            alarmOn = false;
+            Arrays.fill(alarmOn, false); // set all alarms to false
             elasped_time = 0;
         }
     }
@@ -339,6 +404,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                 InputMethodManager.HIDE_NOT_ALWAYS);
         heartTextValue.setText(String.valueOf(maxHR));
     }
+    
     protected void onDestroy() {
         super.onDestroy(); // Call super, because things.
 
@@ -348,5 +414,53 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         // Finally, just incase we're not really closing, make sure we do - by running finish.
         finish();
     }
+
+    /**
+     * Checks to see if any value is true
+     * @param array
+     * @return true if any boolean in the array true.
+     */
+    private boolean isAnyTrue(boolean[] array)
+    {
+        for(boolean index : array){
+            if(index){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Calculates the average heart rate and will trigger an alarm if appropriate
+     */
+    private void checkHRAverage(){
+        int sum = 0;
+        for(int i : heartRate){
+            sum = sum + i;
+        }
+        int average = sum/60;
+        if(average > maxHR){
+            pulse_textView.setBackgroundColor(Color.parseColor("#F44336"));
+        }else{
+            pulse_textView.setBackgroundColor(Color.parseColor("#4CAF50"));
+        }
+    }
+
+    /**
+     * Calculates the average heart rate and will trigger an alarm if appropriate
+     */
+    private void checkRRAverage(){
+        int sum = 0;
+        for(int i : respirationRate){
+            sum = sum + i;
+        }
+        int average = sum/60;
+        if(average > maxRR){
+            o2_textView.setBackgroundColor(Color.parseColor("#F44336"));
+        }else{
+            o2_textView.setBackgroundColor(Color.parseColor("#4CAF50"));
+        }
+    }
+
 
 }
