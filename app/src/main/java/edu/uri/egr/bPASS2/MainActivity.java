@@ -257,8 +257,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             abs_accel[i] = Math.abs(linearAcceleration[i]);
             if (abs_accel[i] > 0.5) {
                 if(elasped_time < 30) {
-                    elasped_time = 0;
-                    endAllAlarms();
+                    endPASSAlarm();
                 }
             }
         }
@@ -311,8 +310,6 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         long pressTime = System.currentTimeMillis();
         // If double click...
         if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
-            //endAlarm(o2_TextView);
-            //endAlarm(pulse_TextView);
             endAllAlarms();
         }
         // record the last time the menu button was pressed.
@@ -392,7 +389,30 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             }
             Arrays.fill(alarmOn, false); // set all alarms to false
             elasped_time = 0;
+
+            // resets all HR and RR data
+            //For Heart Rate
+            Arrays.fill(heartRate, 0);
+            indexHR = 0;
+            isHRBuffered = false;
+
+            //For Respiration Rate
+            Arrays.fill(respirationRate, 0);
+            indexRR = 0;
+            isRRBuffered = false;
         }
+    }
+
+    //Turn off PASS alarm
+    private void endPASSAlarm() {
+        if (alarmOn[0]) {
+            mp.stop();
+            mp.release();
+            mp = null;
+            motion_textView.setBackgroundColor(Color.parseColor("#4CAF50"));
+            alarmOn[0] = false;
+        }
+        elasped_time = 0;
     }
 
     //Turn off the alarm
@@ -419,7 +439,6 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
                 getSystemService(Context.INPUT_METHOD_SERVICE);
         inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),
                 InputMethodManager.HIDE_NOT_ALWAYS);
-        heartTextValue.setText(String.valueOf(maxHR));
     }
     
     protected void onDestroy() {
@@ -488,6 +507,4 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             alarmOn[2] = false;
         }
     }
-
-
 }
