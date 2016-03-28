@@ -70,7 +70,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
 
     //For Heart Rate
     private int heartRate[] = new int[60];
-    private int maxHR = 0,
+    private int maxHR = 220,
                 indexHR = 0;
     private boolean isHRBuffered = false;
 
@@ -89,6 +89,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     @Bind(R.id.motion_textView) TextView motion_textView;
     @Bind(R.id.pulse_textView) TextView pulse_textView;
     @Bind(R.id.o2_textView) TextView o2_textView;
+    @Bind(R.id.temp_textView) TextView temp_textView;
     @Bind(R.id.pressure_value) TextView pTextValue;
     @Bind(R.id.age_editText) TextView ageEditText;
 
@@ -257,7 +258,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             if (abs_accel[i] > 0.5) {
                 if(elasped_time < 30) {
                     elasped_time = 0;
-                    endAlarm(motion_textView);
+                    endAllAlarms();
                 }
             }
         }
@@ -312,7 +313,7 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         if (pressTime - lastPressTime <= DOUBLE_PRESS_INTERVAL) {
             //endAlarm(o2_TextView);
             //endAlarm(pulse_TextView);
-            endAlarm(motion_textView);
+            endAllAlarms();
         }
         // record the last time the menu button was pressed.
         lastPressTime = pressTime;
@@ -361,7 +362,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
 
     private void activateHeartRateAlarm(){
         if (!isAnyTrue(alarmOn)) {
-            mp = MediaPlayer.create(this, R.raw.passprealarm);
+            pulse_textView.setBackgroundColor(Color.parseColor("#F44336"));
+            mp = MediaPlayer.create(this, R.raw.tachycardiaalarm);
             mp.setLooping(true);
             mp.start();
         }
@@ -370,7 +372,8 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
 
     private void activateRespirationRateAlarm(){
         if (!isAnyTrue(alarmOn)) {
-            mp = MediaPlayer.create(this, R.raw.passprealarm);
+            o2_textView.setBackgroundColor(Color.parseColor("#F44336"));
+            mp = MediaPlayer.create(this, R.raw.tachycardiaalarm);
             mp.setLooping(true);
             mp.start();
         }
@@ -378,13 +381,27 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
     }
 
     //Turn off the alarm
-    private void endAlarm(TextView text_view) {
+    private void endAllAlarms() {
         if (isAnyTrue(alarmOn)) {
             mp.stop();
             mp.release();
             mp = null;
-            text_view.setBackgroundColor(Color.parseColor("#4CAF50"));
+            TextView[] alarms = {motion_textView, o2_textView, temp_textView, pulse_textView};
+            for(int i = 0; i < alarms.length; i++){
+                alarms[i].setBackgroundColor(Color.parseColor("#4CAF50"));
+            }
             Arrays.fill(alarmOn, false); // set all alarms to false
+            elasped_time = 0;
+        }
+    }
+
+    //Turn off the alarm
+    private void endAlarm(TextView text_view) {
+        if (!alarmOn[0]) {
+            mp.stop();
+            mp.release();
+            mp = null;
+            text_view.setBackgroundColor(Color.parseColor("#4CAF50"));
             elasped_time = 0;
         }
     }
@@ -439,10 +456,15 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
             sum = sum + i;
         }
         int average = sum/60;
-        if(average > maxHR){
-            pulse_textView.setBackgroundColor(Color.parseColor("#F44336"));
+        if(average > maxHR) {
+            if (!alarmOn[1]){
+                activateHeartRateAlarm();
+            }
         }else{
-            pulse_textView.setBackgroundColor(Color.parseColor("#4CAF50"));
+            if(alarmOn[1]){
+                endAlarm(pulse_textView);
+            }
+            alarmOn[1] = false;
         }
     }
 
@@ -456,9 +478,14 @@ public class MainActivity extends HermesActivity implements SensorEventListener{
         }
         int average = sum/60;
         if(average > maxRR){
-            o2_textView.setBackgroundColor(Color.parseColor("#F44336"));
+            if(!alarmOn[2]){
+                //activateRespirationRateAlarm();
+            }
         }else{
-            o2_textView.setBackgroundColor(Color.parseColor("#4CAF50"));
+            if(alarmOn[2]) {
+                endAlarm(o2_textView);
+            }
+            alarmOn[2] = false;
         }
     }
 
